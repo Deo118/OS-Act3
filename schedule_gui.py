@@ -182,6 +182,20 @@ def round_robin(processes, quantum):
 
     return order, timeline
 
+# ---------------- Animation Functions ----------------
+
+#Animate auto generated entries
+def animate_entry(entry, final_value, delay=50, steps=10, min_val=0, max_val=15):
+    def step(count):
+        if count > 0:
+            entry.delete(0, "end")
+            entry.insert(0, str(random.randint(min_val, max_val)))
+            entry.after(delay, step, count -1)
+        else:
+            entry.delete(0, "end")
+            entry.insert(0, str(final_value))
+    step(steps)
+
 # ---------------- Run Algorithm and Output Functions ----------------
 
 # Run the selected scheduling algorithm
@@ -234,39 +248,37 @@ def run_algorithm():
     output_win.title("Simulation Results")
     center_window(output_win, 800, 600)
 
-    # Output label
     ctk.CTkLabel(output_win, text="OUTPUT", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=10)
 
-    # Textbox for results
     result_text = ctk.CTkTextbox(output_win, width=760, height=450, wrap="none")
     result_text.pack(padx=10, pady=10, fill="both", expand=True)
     result_text.configure(font=("Courier New", 14))
 
-    # Build Gantt Chart output
+    #Gantt Chart 
     result_text.insert("end", "Gantt Chart:\n")
 
     label_timeline = "Process Timeline:"
-    label_finish = "Finish Time:"
+    label_finish   = "Finish Times:"
     pad = max(len(label_timeline), len(label_finish))
     label_timeline = label_timeline.ljust(pad)
-    label_finish = label_finish.ljust(pad)
+    label_finish   = label_finish.ljust(pad)
 
-    segments = [f"| {pid} " for pid, s, f in timeline]
+    segments = [f"| {pid} " for pid, _, _ in timeline]
     widths = [len(seg) for seg in segments]
 
     # Top row
-    result_text.insert("end", label_timeline)
-    for pid, s, f in timeline:
-        result_text.insert("end", f"| {pid} ")
+    result_text.insert("end", label_timeline + "  ")
+    for seg in segments:
+        result_text.insert("end", seg)
     result_text.insert("end", "|\n")
 
-    # Bottom row
-    result_text.insert("end", label_finish)
+    # Bottom row 
+    result_text.insert("end", label_finish + "  ")
     for (pid, s, f), w in zip(timeline, widths):
-        result_text.insert("end", str(s).ljust(w))
-    result_text.insert("end", f"{timeline[-1][2]}\n\n")
+        result_text.insert("end", str(s).ljust(w))  
+    result_text.insert("end", str(timeline[-1][2]) + "\n\n")
 
-    # Process Table
+    # Process Table 
     header = f"{'Process':<10}{'AT':<10}{'BT':<10}{'WT':<10}{'TAT':<10}\n"
     result_text.insert("end", header)
     result_text.insert("end", "-" * 50 + "\n")
@@ -322,17 +334,15 @@ def auto_generate():
         return
     if not entries or len(entries) != n:
         create_entries()
+
     for i in range(n):
-        at = random.randint(0, 10)
-        bt = random.randint(1, 10)
-        entries[i][0].delete(0, "end")
-        entries[i][0].insert(0, str(at))
-        entries[i][1].delete(0, "end")
-        entries[i][1].insert(0, str(bt))
+        at = random.randint(0, 15)
+        bt = random.randint(1, 15)
+        animate_entry(entries[i][0], at, min_val=0, max_val=15)
+        animate_entry(entries[i][1], bt, min_val=1, max_val=15)
         if algo_choice.get() == "Priority":
             pr = random.randint(1, 5)
-            entries[i][2].delete(0, "end")
-            entries[i][2].insert(0, str(pr))
+            animate_entry(entries[i][2], pr, min_val=1, max_val=5)
 
 # ---------------- Utility Functions ----------------
 
