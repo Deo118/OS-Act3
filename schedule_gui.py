@@ -138,10 +138,17 @@ def round_robin(processes, quantum):
     tat, wt, completed = [0]*n, [0]*n, [False]*n
     processes.sort(key=lambda x: x.at)    # Sort by arrival time
 
-    # Load initial processes that have arrived at time 0
+    # Load initial processes that have arrived at or before time 0
     i = 0
     while i < n and processes[i].at <= time:
-        queue.append(i); i += 1
+        queue.append(i)
+        i += 1
+
+    # If no process arrives at time 0, jump to the first arrival
+    if not queue and i < n:
+        time = processes[i].at
+        queue.append(i)
+        i += 1
 
     while queue:
         idx = queue.popleft()
@@ -212,7 +219,7 @@ def run_algorithm():
         try:
             at = int(entries[i][0].get())
             bt = int(entries[i][1].get())
-            pr = int(entries[i][2].get()) if "Priority" in algo else 0
+            pr = int(entries[i][2].get()) if "Priority" in algo_choice.get() else 0
             processes.append(Process(f"P{i + 1}", at, bt, pr))
         except:
             messagebox.showerror("Error", f"Invalid input in Process {i + 1}")
@@ -276,7 +283,10 @@ def run_algorithm():
     result_text.insert("end", label_finish + "  ")
     for (pid, s, f), w in zip(timeline, widths):
         result_text.insert("end", str(s).ljust(w))  
-    result_text.insert("end", str(timeline[-1][2]) + "\n\n")
+    if timeline:
+        result_text.insert("end", str(timeline[-1][2]) + "\n\n")
+    else:
+        result_text.insert("end", "\n(No timeline generated)\n\n")
 
     # Process Table 
     header = f"{'Process':<10}{'AT':<10}{'BT':<10}{'WT':<10}{'TAT':<10}\n"
@@ -302,28 +312,41 @@ def run_algorithm():
 
 # Create entry fields for process input
 def create_entries():
+    # clear old widgets
     for widget in frame_inputs.winfo_children():
         widget.destroy()
+
     try:
         n = int(entry_n.get())
     except:
         return
+
     global entries
     entries = []
+
+    is_priority = "Priority" in algo_choice.get()  # check if priority is needed
+
     for i in range(n):
         ctk.CTkLabel(frame_inputs, text=f"P{i + 1} Arrival Time:").grid(row=i, column=0, padx=5, pady=2)
         at_entry = ctk.CTkEntry(frame_inputs, width=60, justify="center")
         at_entry.grid(row=i, column=1, padx=5)
+
         ctk.CTkLabel(frame_inputs, text="Burst Time:").grid(row=i, column=2, padx=5)
         bt_entry = ctk.CTkEntry(frame_inputs, width=60, justify="center")
         bt_entry.grid(row=i, column=3, padx=5)
-        if algo_choice.get() == "Priority":
+
+        # create a priority entry widget if required; otherwise create a placeholder entry
+        if is_priority:
             ctk.CTkLabel(frame_inputs, text="Priority:").grid(row=i, column=4, padx=5)
             pr_entry = ctk.CTkEntry(frame_inputs, width=60, justify="center")
             pr_entry.grid(row=i, column=5, padx=5)
         else:
+            # placeholder entry (not gridded) so entries[i][2] still exists and can be safely read/animated
             pr_entry = ctk.CTkEntry(frame_inputs, width=60, justify="center")
+
         entries.append((at_entry, bt_entry, pr_entry))
+
+
 
 # Auto-generate random process data
 def auto_generate():
@@ -332,17 +355,36 @@ def auto_generate():
     except:
         messagebox.showerror("Error", "Enter a valid number of processes first")
         return
-    if not entries or len(entries) != n:
+
+    # Ensure entry fields exist and match n; create them if they don't
+    if 'entries' not in globals() or not entries or len(entries) != n:
         create_entries()
 
+    # After create_entries, validate again
+    if 'entries' not in globals() or not entries or len(entries) != n:
+        messagebox.showerror("Error", "Please click 'Set Processes' first before Auto Generate.")
+        return
+
+    is_priority = "Priority" in algo_choice.get()
+
+    # Populate values with animation (or instant if you prefer)
     for i in range(n):
         at = random.randint(0, 15)
         bt = random.randint(1, 15)
+
+        # animate_entry expects a widget (entry) — entries[i][0] and [1] exist
         animate_entry(entries[i][0], at, min_val=0, max_val=15)
         animate_entry(entries[i][1], bt, min_val=1, max_val=15)
-        if algo_choice.get() == "Priority":
+
+        if is_priority:
             pr = random.randint(1, 5)
             animate_entry(entries[i][2], pr, min_val=1, max_val=5)
+        else:
+            # Optional: clear placeholder so it doesn't contain stale data
+            entries[i][2].delete(0, "end")
+
+
+
 
 # ---------------- Utility Functions ----------------
 
